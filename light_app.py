@@ -55,10 +55,12 @@ def teacher_view():
             color: black !important;
         }
         .bg-box {
-            background-color: #fffbe7;
+            background-color: #ffffff;
+            color: black;
             padding: 10px;
             border-radius: 10px;
-            font-size: 18px;
+            font-size: 20px;
+            margin-bottom: 6px;
         }
         </style>
     """, unsafe_allow_html=True)
