@@ -1,12 +1,8 @@
 import streamlit as st
-from streamlit_autorefresh import st_autorefresh
 import pandas as pd
 import datetime
 import base64
 import time
-
-# 자동 새로고침: 5초마다
-st_autorefresh(interval=5000, limit=None, key="auto-refresh")
 
 st.set_page_config(page_title="신호등 활동 웹앱 🚦", layout="wide")
 
@@ -136,6 +132,10 @@ def teacher_view():
         if st.button("📂 불러오기"):
             load_data()
             st.success("📂 불러오기 완료!")
+
+    # ✅ 수동 새로고침 버튼 추가
+    if st.button("⏳ 타이머 새로고침"):
+        st.rerun()
 
     st.markdown("### 🚦 현재 신호등 상태")
     now = time.time()
