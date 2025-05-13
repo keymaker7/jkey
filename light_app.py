@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import datetime
+import base64
 import random
 
 st.set_page_config(page_title="신호등 활동 웹앱 🚦", layout="wide")
@@ -40,14 +41,28 @@ def load_data():
         st.session_state.activities = list(df.columns[1:])
         for act in st.session_state.activities:
             st.session_state.activity_data[act] = dict(zip(df["학생"], df[act]))
-    except FileNotFoundError:
-        st.warning("저장된 파일이 없습니다.")
+    except Exception as e:
+        st.error(f"불러오기 오류: {str(e)}")
 
 # 탭 구성
 tab1, tab2 = st.tabs(["👩‍🏫 교사용 화면", "👦👧 학생용 화면"])
 
 # 교사용 화면
 def teacher_view():
+    st.markdown("""
+        <style>
+        input, textarea, select, option {
+            color: black !important;
+        }
+        .bg-box {
+            background-color: #fffbe7;
+            padding: 10px;
+            border-radius: 10px;
+            font-size: 18px;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+
     st.title("📋 교사용 학생 활동 대시보드 🚦")
     st.markdown("### ✏️ 학생 명단을 입력하세요 (쉼표로 구분)")
     names_input = st.text_input("예: 지훈, 수아, 민재")
@@ -88,7 +103,7 @@ def teacher_view():
 
     st.markdown("### 🚦 현재 신호등 상태")
     for name in st.session_state.students:
-        row = f"<div style='background:#fff3cd;padding:10px;border-radius:10px;font-size:20px;'>🧒 <b>{name}</b>"
+        row = f"<div class='bg-box'>🧒 <b>{name}</b>"
         for act in st.session_state.activities:
             state = st.session_state.activity_data[act].get(name, "🔴")
             row += f" | <b>{act}</b>: {state}"
@@ -109,7 +124,19 @@ def teacher_view():
         deadline = st.session_state.activity_deadlines.get(act)
         if deadline and now > deadline:
             st.warning(f"⏰ 활동 '{act}'의 마감 시간이 지났습니다! 마감: {deadline.strftime('%H:%M')}")
+
+        # 완료자 목록
+        finished = [s for s in st.session_state.students if st.session_state.activity_data[act].get(s) == "🟢"]
+        with st.expander(f"🟢 '{act}' 완료 학생 목록 보기"):
+            for s in finished:
+                st.markdown(f"✅ {s}")
+
         st.bar_chart(counts)
+
+# 소리 재생용 함수 (base64로 포함된 간단한 비프음)
+def play_sound():
+    sound_base64 = "UklGRiQAAABXQVZFZm10IBAAAAABAAEAIlYAAESsAAACABAAZGF0YRAAAAD//w=="
+    st.markdown(f"""<audio autoplay><source src='data:audio/wav;base64,{sound_base64}' type='audio/wav'></audio>""", unsafe_allow_html=True)
 
 # 학생용 화면
 def student_view():
@@ -130,9 +157,7 @@ def student_view():
                 st.success(f"✅ {name}의 상태가 {next_state}로 변경되었습니다!")
                 if next_state == "🟢":
                     st.balloons()
-
-            st.markdown("---")
-            st.image("/mnt/data/9d97692a-5598-45b4-a63e-b459cb4dd0d2.png", caption="신호등 예시", use_container_width=True)
+                    play_sound()
 
 # 탭 연결
 with tab1:
