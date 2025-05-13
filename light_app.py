@@ -22,12 +22,15 @@ with tab1:
     st.markdown(
         """
         <style>
-        .big-font { font-size:30px !important; }
+        .big-font { font-size:30px !important; color: black; }
         .bg-box {
             background-color: #fff3cd;
             padding: 20px;
             border-radius: 20px;
             box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        input, textarea, select, option {
+            color: black !important;
         }
         </style>
         """,
@@ -85,7 +88,7 @@ with tab2:
                 st.success(f"✅ {name}의 상태가 {next_state}로 변경되었습니다!")
 
             st.markdown("---")
-            st.image("https://i.imgur.com/DzHr9Xy.png", caption="신호등 예시 이미지", use_column_width=True)
+            st.image("/mnt/data/a93ea65a-a394-4730-9177-f4d15dd0152b.png", caption="신호등 예시 이미지", use_container_width=True)
 
 # QR 코드 접속은 별도 배포 주소에서 브라우저 즐겨찾기 또는 휴대폰으로 접속 시 해결 가능합니다.
 # 외부 공유 필요시 cloud 또는 ngrok 이용한 공개 주소 사용 권장
