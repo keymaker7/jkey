@@ -1,8 +1,12 @@
 import streamlit as st
+from streamlit_autorefresh import st_autorefresh
 import pandas as pd
 import datetime
 import base64
 import time
+
+# 자동 새로고침: 5초마다
+st_autorefresh(interval=5000, limit=None, key="auto-refresh")
 
 st.set_page_config(page_title="신호등 활동 웹앱 🚦", layout="wide")
 
@@ -181,6 +185,3 @@ with tab1:
     teacher_view()
 with tab2:
     student_view()
-
-# 실시간 새로고침 제거 (오류 원인)
-# st.experimental_rerun()  ← 제거됨
