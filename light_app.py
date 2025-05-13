@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 import datetime
 import base64
-import random
 
 st.set_page_config(page_title="신호등 활동 웹앱 🚦", layout="wide")
 
@@ -55,12 +54,13 @@ def teacher_view():
             color: black !important;
         }
         .bg-box {
-            background-color: #ffffff;
-            color: black;
-            padding: 10px;
-            border-radius: 10px;
-            font-size: 20px;
-            margin-bottom: 6px;
+            background-color: #f8f8f8;
+            color: #000000;
+            padding: 15px;
+            border-radius: 12px;
+            font-size: 22px;
+            font-weight: bold;
+            margin-bottom: 8px;
         }
         </style>
     """, unsafe_allow_html=True)
@@ -68,7 +68,7 @@ def teacher_view():
     st.title("📋 교사용 학생 활동 대시보드 🚦")
     st.markdown("### ✏️ 학생 명단을 입력하세요 (쉼표로 구분)")
     names_input = st.text_input("예: 지훈, 수아, 민재")
-    
+
     if st.button("👥 명단 생성"):
         students = [name.strip() for name in names_input.split(",") if name.strip()]
         st.session_state.students = students
@@ -105,10 +105,10 @@ def teacher_view():
 
     st.markdown("### 🚦 현재 신호등 상태")
     for name in st.session_state.students:
-        row = f"<div class='bg-box'>🧒 <b>{name}</b>"
+        row = f"<div class='bg-box'>🧒 {name}"
         for act in st.session_state.activities:
             state = st.session_state.activity_data[act].get(name, "🔴")
-            row += f" | <b>{act}</b>: {state}"
+            row += f" | {act}: {state}"
         row += "</div>"
         st.markdown(row, unsafe_allow_html=True)
 
@@ -122,12 +122,10 @@ def teacher_view():
         st.markdown(f"#### {act} - 🟢 완료율: {green_percent}%")
         st.progress(green_percent / 100)
 
-        # 마감 알림
         deadline = st.session_state.activity_deadlines.get(act)
         if deadline and now > deadline:
             st.warning(f"⏰ 활동 '{act}'의 마감 시간이 지났습니다! 마감: {deadline.strftime('%H:%M')}")
 
-        # 완료자 목록
         finished = [s for s in st.session_state.students if st.session_state.activity_data[act].get(s) == "🟢"]
         with st.expander(f"🟢 '{act}' 완료 학생 목록 보기"):
             for s in finished:
@@ -135,7 +133,7 @@ def teacher_view():
 
         st.bar_chart(counts)
 
-# 소리 재생용 함수 (base64로 포함된 간단한 비프음)
+# 소리 재생용 함수
 def play_sound():
     sound_base64 = "UklGRiQAAABXQVZFZm10IBAAAAABAAEAIlYAAESsAAACABAAZGF0YRAAAAD//w=="
     st.markdown(f"""<audio autoplay><source src='data:audio/wav;base64,{sound_base64}' type='audio/wav'></audio>""", unsafe_allow_html=True)
