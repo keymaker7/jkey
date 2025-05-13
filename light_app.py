@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import datetime
 import base64
+import time
 
 st.set_page_config(page_title="신호등 활동 웹앱 🚦", layout="wide")
 
@@ -18,6 +19,10 @@ if "activity_data" not in st.session_state:
     st.session_state.activity_data = {}
 if "activity_deadlines" not in st.session_state:
     st.session_state.activity_deadlines = {}
+if "activity_start_times" not in st.session_state:
+    st.session_state.activity_start_times = {}
+if "activity_durations" not in st.session_state:
+    st.session_state.activity_durations = {}
 
 # 모든 활동별 신호등 초기화
 for act in st.session_state.activities:
@@ -25,6 +30,10 @@ for act in st.session_state.activities:
         st.session_state.activity_data[act] = {}
     if act not in st.session_state.activity_deadlines:
         st.session_state.activity_deadlines[act] = None
+    if act not in st.session_state.activity_start_times:
+        st.session_state.activity_start_times[act] = None
+    if act not in st.session_state.activity_durations:
+        st.session_state.activity_durations[act] = 0
 
 # 저장/불러오기 함수
 def save_data():
@@ -42,6 +51,16 @@ def load_data():
             st.session_state.activity_data[act] = dict(zip(df["학생"], df[act]))
     except Exception as e:
         st.error(f"불러오기 오류: {str(e)}")
+
+# 소리 재생용 함수
+def play_sound():
+    sound_base64 = "UklGRiQAAABXQVZFZm10IBAAAAABAAEAIlYAAESsAAACABAAZGF0YRAAAAD//w=="
+    st.markdown(f"<audio autoplay><source src='data:audio/wav;base64,{sound_base64}' type='audio/wav'></audio>", unsafe_allow_html=True)
+
+# 타이머 텍스트 함수
+def format_remaining(seconds):
+    mins, secs = divmod(max(0, int(seconds)), 60)
+    return f"{mins:02d}:{secs:02d}"
 
 # 탭 구성
 tab1, tab2 = st.tabs(["👩‍🏫 교사용 화면", "👦👧 학생용 화면"])
@@ -76,21 +95,28 @@ def teacher_view():
             st.session_state.activity_data[act] = {name: "🔴" for name in students}
         st.success("✅ 명단이 생성되었습니다!")
 
+    st.markdown("### ⏱️ 기본 활동 타이머 설정 (분 단위)")
+    basic_duration = st.number_input("기본 활동 시간", min_value=1, max_value=180, value=10)
+
     if st.button("🟢 활동 시작"):
         for act in st.session_state.activities:
             for name in st.session_state.students:
                 st.session_state.activity_data[act][name] = "🔴"
+            if act == "기본 활동":
+                st.session_state.activity_start_times[act] = time.time()
+                st.session_state.activity_durations[act] = basic_duration * 60
         st.balloons()
-        st.success("🟢 모든 활동이 초기화되었습니다!")
+        st.success("🟢 활동이 시작되었습니다!")
 
     st.markdown("### ➕ 활동 추가")
     new_act = st.text_input("새로운 활동명 입력")
-    deadline = st.time_input("🕒 마감 시간 설정")
+    duration_min = st.number_input("활동 시간 (분)", min_value=1, max_value=180, value=10, key="duration")
     if st.button("활동 추가") and new_act and new_act not in st.session_state.activities:
         st.session_state.activities.append(new_act)
         st.session_state.activity_data[new_act] = {name: "🔴" for name in st.session_state.students}
-        st.session_state.activity_deadlines[new_act] = deadline
-        st.success(f"✅ 활동 '{new_act}'이(가) 추가되었습니다! 마감 시간: {deadline.strftime('%H:%M')}")
+        st.session_state.activity_start_times[new_act] = time.time()
+        st.session_state.activity_durations[new_act] = duration_min * 60
+        st.success(f"✅ 활동 '{new_act}'이(가) 추가되었습니다!")
 
     st.markdown("### 💾 명단 저장 및 불러오기")
     col1, col2 = st.columns(2)
@@ -104,39 +130,23 @@ def teacher_view():
             st.success("📂 불러오기 완료!")
 
     st.markdown("### 🚦 현재 신호등 상태")
+    now = time.time()
     for name in st.session_state.students:
         row = f"<div class='bg-box'>🧒 {name}"
         for act in st.session_state.activities:
             state = st.session_state.activity_data[act].get(name, "🔴")
-            row += f" | {act}: {state}"
+            start = st.session_state.activity_start_times.get(act)
+            duration = st.session_state.activity_durations.get(act, 0)
+            timer_display = ""
+            if start:
+                elapsed = now - start
+                remaining = format_remaining(duration - elapsed)
+                timer_display = f" ⏱️ {remaining}"
+                if elapsed >= duration:
+                    play_sound()
+            row += f" | {act}: {state}{timer_display}"
         row += "</div>"
         st.markdown(row, unsafe_allow_html=True)
-
-    st.markdown("### 📊 활동별 통계 및 마감 알림")
-    now = datetime.datetime.now().time()
-    for act in st.session_state.activities:
-        data = pd.Series(list(st.session_state.activity_data[act].values()))
-        counts = data.value_counts().reindex(["🔴", "🟡", "🟢"], fill_value=0)
-        total = len(data)
-        green_percent = round((counts.get("🟢", 0) / total) * 100, 1) if total else 0
-        st.markdown(f"#### {act} - 🟢 완료율: {green_percent}%")
-        st.progress(green_percent / 100)
-
-        deadline = st.session_state.activity_deadlines.get(act)
-        if deadline and now > deadline:
-            st.warning(f"⏰ 활동 '{act}'의 마감 시간이 지났습니다! 마감: {deadline.strftime('%H:%M')}")
-
-        finished = [s for s in st.session_state.students if st.session_state.activity_data[act].get(s) == "🟢"]
-        with st.expander(f"🟢 '{act}' 완료 학생 목록 보기"):
-            for s in finished:
-                st.markdown(f"✅ {s}")
-
-        st.bar_chart(counts)
-
-# 소리 재생용 함수
-def play_sound():
-    sound_base64 = "UklGRiQAAABXQVZFZm10IBAAAAABAAEAIlYAAESsAAACABAAZGF0YRAAAAD//w=="
-    st.markdown(f"""<audio autoplay><source src='data:audio/wav;base64,{sound_base64}' type='audio/wav'></audio>""", unsafe_allow_html=True)
 
 # 학생용 화면
 def student_view():
