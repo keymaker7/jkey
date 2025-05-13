@@ -182,5 +182,5 @@ with tab1:
 with tab2:
     student_view()
 
-# 자동 새로고침
-st.experimental_rerun()
+# 실시간 새로고침 제거 (오류 원인)
+# st.experimental_rerun()  ← 제거됨
