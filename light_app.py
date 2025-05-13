@@ -17,23 +17,19 @@ if "activities" not in st.session_state:
     st.session_state.activities = ["기본 활동"]
 if "activity_data" not in st.session_state:
     st.session_state.activity_data = {}
-if "activity_deadlines" not in st.session_state:
-    st.session_state.activity_deadlines = {}
 if "activity_start_times" not in st.session_state:
     st.session_state.activity_start_times = {}
 if "activity_durations" not in st.session_state:
     st.session_state.activity_durations = {}
+if "activity_active" not in st.session_state:
+    st.session_state.activity_active = {}
 
-# 모든 활동별 신호등 초기화
+# 활동별 기본 초기화
 for act in st.session_state.activities:
-    if act not in st.session_state.activity_data:
-        st.session_state.activity_data[act] = {}
-    if act not in st.session_state.activity_deadlines:
-        st.session_state.activity_deadlines[act] = None
-    if act not in st.session_state.activity_start_times:
-        st.session_state.activity_start_times[act] = None
-    if act not in st.session_state.activity_durations:
-        st.session_state.activity_durations[act] = 0
+    st.session_state.activity_data.setdefault(act, {})
+    st.session_state.activity_start_times.setdefault(act, None)
+    st.session_state.activity_durations.setdefault(act, 0)
+    st.session_state.activity_active.setdefault(act, False)
 
 # 저장/불러오기 함수
 def save_data():
@@ -57,7 +53,7 @@ def play_sound():
     sound_base64 = "UklGRiQAAABXQVZFZm10IBAAAAABAAEAIlYAAESsAAACABAAZGF0YRAAAAD//w=="
     st.markdown(f"<audio autoplay><source src='data:audio/wav;base64,{sound_base64}' type='audio/wav'></audio>", unsafe_allow_html=True)
 
-# 타이머 텍스트 함수
+# 타이머 텍스트
 def format_remaining(seconds):
     mins, secs = divmod(max(0, int(seconds)), 60)
     return f"{mins:02d}:{secs:02d}"
@@ -105,7 +101,7 @@ def teacher_view():
             if act == "기본 활동":
                 st.session_state.activity_start_times[act] = time.time()
                 st.session_state.activity_durations[act] = basic_duration * 60
-        st.balloons()
+                st.session_state.activity_active[act] = True
         st.success("🟢 활동이 시작되었습니다!")
 
     st.markdown("### ➕ 활동 추가")
@@ -116,7 +112,15 @@ def teacher_view():
         st.session_state.activity_data[new_act] = {name: "🔴" for name in st.session_state.students}
         st.session_state.activity_start_times[new_act] = time.time()
         st.session_state.activity_durations[new_act] = duration_min * 60
+        st.session_state.activity_active[new_act] = True
         st.success(f"✅ 활동 '{new_act}'이(가) 추가되었습니다!")
+
+    st.markdown("### 🔄 활동 타이머 초기화")
+    selected_reset = st.selectbox("초기화할 활동 선택", st.session_state.activities)
+    if st.button("⏹️ 선택한 활동 타이머 초기화"):
+        st.session_state.activity_start_times[selected_reset] = time.time()
+        st.session_state.activity_active[selected_reset] = True
+        st.success(f"'{selected_reset}' 타이머가 초기화되었습니다!")
 
     st.markdown("### 💾 명단 저장 및 불러오기")
     col1, col2 = st.columns(2)
@@ -138,12 +142,15 @@ def teacher_view():
             start = st.session_state.activity_start_times.get(act)
             duration = st.session_state.activity_durations.get(act, 0)
             timer_display = ""
-            if start:
+            if start and st.session_state.activity_active[act]:
                 elapsed = now - start
-                remaining = format_remaining(duration - elapsed)
-                timer_display = f" ⏱️ {remaining}"
-                if elapsed >= duration:
+                remaining = duration - elapsed
+                if remaining <= 0:
+                    timer_display = " ⏱️ 00:00"
+                    st.session_state.activity_active[act] = False
                     play_sound()
+                else:
+                    timer_display = f" ⏱️ {format_remaining(remaining)}"
             row += f" | {act}: {state}{timer_display}"
         row += "</div>"
         st.markdown(row, unsafe_allow_html=True)
@@ -174,3 +181,6 @@ with tab1:
     teacher_view()
 with tab2:
     student_view()
+
+# 자동 새로고침
+st.experimental_rerun()
